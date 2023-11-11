@@ -27,8 +27,9 @@ const blockIconURI = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNv
  * The url of the synthesis server.
  * @type {string}
  */
-const SERVER_HOST = 'https://synthesis-service.scratch.mit.edu';
-
+// const SERVER_HOST = 'https://synthesis-service.scratch.mit.edu';
+// use baidu api
+const SERVER_HOST = 'https://tsn.baidu.com/text2audio';
 /**
  * How long to wait in ms before timing out requests to synthesis server.
  * @type {int}
@@ -410,7 +411,14 @@ class Scratch3Text2SpeechBlocks {
                 description: 'hello: the default text to speak'
             });
         }
-
+        let defaultTSNTok = 'baidu_tok';
+        if (this.isSupportedLanguage(this.getEditorLanguage())) {
+            defaultTSNTok = formatMessage({
+                id: 'text2speech.defaultTSNTok',
+                default: 'baidu_tok',
+                description: 'hello: the default tsn'
+            });
+        }
         return {
             id: 'text2speech',
             name: formatMessage({
@@ -433,6 +441,21 @@ class Scratch3Text2SpeechBlocks {
                         WORDS: {
                             type: ArgumentType.STRING,
                             defaultValue: defaultTextToSpeak
+                        }
+                    }
+                },
+                {
+                    opcode: 'setTSN',
+                    text: formatMessage({
+                        id: 'text2speech.setTSNBlock',
+                        default: 'set tsn to [TOK]',
+                        description: 'Set api token for speech synthesis.'
+                    }),
+                    blockType: BlockType.COMMAND,
+                    arguments: {
+                        TOK: {
+                            type: ArgumentType.STRING,
+                            defaultValue: defaultTSNTok
                         }
                     }
                 },
@@ -593,7 +616,6 @@ class Scratch3Text2SpeechBlocks {
             value: voiceId
         }));
     }
-
     /**
      * Get the localized menu of languages for the "set language" block.
      * For each language:
@@ -664,6 +686,11 @@ class Scratch3Text2SpeechBlocks {
         }
     }
 
+    setTSN (args, util) {  
+        let tok = Cast.toString(args.TOK);
+        this.TSNTok = tok; 
+    }
+
     /**
      * Set the language for speech synthesis.
      * @param  {object} args Block arguments
@@ -694,6 +721,7 @@ class Scratch3Text2SpeechBlocks {
 
         const state = this._getState(util.target);
 
+        let tok = this.TSNTok
         let gender = this.VOICE_INFO[state.voiceId].gender;
         let playbackRate = this.VOICE_INFO[state.voiceId].playbackRate;
 
@@ -716,10 +744,16 @@ class Scratch3Text2SpeechBlocks {
         }
 
         // Build up URL
-        let path = `${SERVER_HOST}/synth`;
+        // let path = `${SERVER_HOST}/synth`;
+        let path = `${SERVER_HOST}`; // use baidu
         path += `?locale=${locale}`;
         path += `&gender=${gender}`;
-        path += `&text=${encodeURIComponent(words.substring(0, 128))}`;
+        //path += `&text=${encodeURIComponent(words.substring(0, 128))}`;
+        path += `&tex=${encodeURIComponent(words.substring(0, 128))}`; // use baidu
+        path += `&lan=zh`; // use baidu
+        path += `&cuid=373737`; // baidu
+        path += `&ctp=1`; // baidu
+        path += `&tok=${tok}`;
 
         // Perform HTTP request to get audio file
         return fetchWithTimeout(path, {}, SERVER_TIMEOUT)
